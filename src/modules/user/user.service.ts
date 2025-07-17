@@ -1,5 +1,4 @@
 import { HttpException, Injectable, NotFoundException } from '@nestjs/common';
-import * as bcrypt from 'bcrypt';
 import { CreateUserDto } from './dto/create-user.dto';
 import { InjectRepository } from '@nestjs/typeorm';
 import { User } from './entities/user.entity';
@@ -13,7 +12,7 @@ export class UserService {
     private readonly dataSourse: DataSource,
   ) {}
 
-  async creatUser({ password, ...data }: CreateUserDto) {
+  async creatUser({ ...data }: CreateUserDto) {
     try {
       const existUser = await this.userRepo.exists({
         where: { email: data.email },
@@ -22,10 +21,9 @@ export class UserService {
         throw new HttpException('user exist', 400);
       }
 
-      const hashPassword = await bcrypt.hash(password, 10);
+      // const hashPassword = await bcrypt.hash(password, 10);
       const user = this.userRepo.create({
         ...data,
-        password: hashPassword,
         role: roles.USER,
       });
 
@@ -51,11 +49,11 @@ export class UserService {
     return user;
   }
 
-  async getOneByEmail(id: number) {
-    const user = await this.userRepo.findOne({ where: { id } });
-    if (!user) {
-      throw new NotFoundException('Not found');
-    }
+  async getOneByEmail(email: string) {
+    const user = await this.userRepo.findOne({ where: { email } });
+    // if (!user) {
+    //   throw new NotFoundException('Not found');
+    // }
     return user;
   }
 
@@ -72,7 +70,6 @@ export class UserService {
       .getRepository(User)
       .createQueryBuilder('user')
       .addSelect('user.password')
-      .leftJoinAndSelect('user.role', 'role')
       .where({ email })
       .getOne();
 
