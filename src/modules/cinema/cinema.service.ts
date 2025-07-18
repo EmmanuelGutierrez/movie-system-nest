@@ -1,26 +1,81 @@
-import { Injectable } from '@nestjs/common';
+import {
+  Injectable,
+  InternalServerErrorException,
+  NotFoundException,
+} from '@nestjs/common';
 import { CreateCinemaDto } from './dto/create-cinema.dto';
 import { UpdateCinemaDto } from './dto/update-cinema.dto';
+import { InjectDataSource, InjectRepository } from '@nestjs/typeorm';
+import { Cinema } from './entities/cinema.entity';
+import { DataSource, FindManyOptions, ILike, Repository } from 'typeorm';
+import { FilterCinemaDto } from './dto/filter.dto';
 
 @Injectable()
 export class CinemaService {
-  create(createCinemaDto: CreateCinemaDto) {
-    return 'This action adds a new cinema';
+  constructor(
+    @InjectRepository(Cinema) private readonly cinemaRepo: Repository<Cinema>,
+    @InjectDataSource() private readonly dataSource: DataSource,
+  ) {}
+
+  async createCinema(data: CreateCinemaDto) {
+    const qr = this.dataSource.createQueryRunner();
+    await qr.connect();
+    await qr.startTransaction();
+    try {
+      const repo: Repository<Cinema> = this.dataSource.getRepository(Cinema);
+      const newCinema = repo.create(data);
+      return await repo.save(newCinema);
+    } catch (error: any) {
+      console.log(error);
+      await qr.rollbackTransaction();
+      throw new InternalServerErrorException();
+    } finally {
+      await qr.release();
+    }
   }
 
-  findAll() {
-    return `This action returns all cinema`;
+  async update(cinemaId: number, data: UpdateCinemaDto) {
+    // const res = await this.cinemaRepo.updateOne({ _id: cinemaId }, data);
+    const cinema = await this.getOneById(cinemaId);
+    this.cinemaRepo.merge(cinema, data);
+    return cinema;
   }
 
-  findOne(id: number) {
-    return `This action returns a #${id} cinema`;
+  async getAll(params: FilterCinemaDto) {
+    // const cinemas = await this.cinemaRepo.find();
+    const { limit = 10, page = 1, location, name } = params;
+    const options: FindManyOptions<Cinema> = {
+      take: limit,
+      skip: (page - 1) * limit,
+    };
+    if (name) {
+      options.where = {
+        ...options.where,
+        name: ILike(name),
+      };
+    }
+
+    if (location) {
+      options.where = {
+        ...options.where,
+        location: ILike(location),
+      };
+    }
+    const cinemas = await this.cinemaRepo.find(options);
+    const total = await this.cinemaRepo.count();
+    return { page, inThisPage: cinemas.length, total, data: cinemas };
   }
 
-  update(id: number, updateCinemaDto: UpdateCinemaDto) {
-    return `This action updates a #${id} cinema`;
-  }
+  async getOneById(id: number) {
+    // const cinemas = await this.cinemaRepo.find();
+    const cinema = await this.cinemaRepo.findOne({
+      where: { id },
+      relations: { theaters: true },
+    });
 
-  remove(id: number) {
-    return `This action removes a #${id} cinema`;
+    if (!cinema) {
+      throw new NotFoundException('Not found');
+    }
+    return cinema;
   }
 }

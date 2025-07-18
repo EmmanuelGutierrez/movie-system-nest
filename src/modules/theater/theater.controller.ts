@@ -1,7 +1,16 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Body,
+  Param,
+  ParseIntPipe,
+  Query,
+} from '@nestjs/common';
 import { TheaterService } from './theater.service';
 import { CreateTheaterDto } from './dto/create-theater.dto';
-import { UpdateTheaterDto } from './dto/update-theater.dto';
+import { FilterTheaterDto } from './dto/filter.dto';
+// import { UpdateTheaterDto } from './dto/update-theater.dto';
 
 @Controller('theater')
 export class TheaterController {
@@ -9,26 +18,24 @@ export class TheaterController {
 
   @Post()
   create(@Body() createTheaterDto: CreateTheaterDto) {
-    return this.theaterService.create(createTheaterDto);
+    return this.theaterService.createTheater(createTheaterDto);
   }
 
   @Get()
-  findAll() {
-    return this.theaterService.findAll();
+  findAll(@Query() params: FilterTheaterDto) {
+    return this.theaterService.getAll(params);
   }
 
   @Get(':id')
-  findOne(@Param('id') id: string) {
-    return this.theaterService.findOne(+id);
+  findOne(@Param('id', ParseIntPipe) id: number) {
+    return this.theaterService.getOneById(id);
   }
 
-  @Patch(':id')
-  update(@Param('id') id: string, @Body() updateTheaterDto: UpdateTheaterDto) {
-    return this.theaterService.update(+id, updateTheaterDto);
-  }
-
-  @Delete(':id')
-  remove(@Param('id') id: string) {
-    return this.theaterService.remove(+id);
-  }
+  // @Patch(':id')
+  // update(
+  //   @Param('id', ParseIntPipe) id: number,
+  //   @Body() updateTheaterDto: UpdateTheaterDto,
+  // ) {
+  //   return this.theaterService.update(+id, updateTheaterDto);
+  // }
 }

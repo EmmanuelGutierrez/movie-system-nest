@@ -7,6 +7,8 @@ import {
   UseInterceptors,
   // UploadedFile,
   UploadedFiles,
+  Param,
+  ParseIntPipe,
 } from '@nestjs/common';
 import { MovieService } from './movie.service';
 import { FilterDto } from './dto/filter.dto';
@@ -59,10 +61,10 @@ export class MovieController {
     return this.movieService.getAll(querys);
   }
 
-  // @Get(':id')
-  // findOne(@Param('id') id: string) {
-  //   return this.movieService.findOne(+id);
-  // }
+  @Get(':id')
+  findOne(@Param('id', ParseIntPipe) id: number) {
+    return this.movieService.getOneById(id);
+  }
 
   // @Patch(':id')
   // update(@Param('id') id: string, @Body() updateMovieDto: UpdateMovieDto) {
