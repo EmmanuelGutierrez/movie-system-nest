@@ -4,7 +4,7 @@ import {
   OnModuleDestroy,
   OnModuleInit,
 } from '@nestjs/common';
-import { Redis } from 'ioredis';
+import { Redis, RedisKey } from 'ioredis';
 import Redlock, { Lock } from 'redlock';
 
 @Injectable()
@@ -86,7 +86,7 @@ export class RedisService implements OnModuleDestroy, OnModuleInit {
     }
   }
 
-  async mget<T>(...keys: string[]) {
+  async mget<T>(keys: RedisKey[]) {
     const values = await this.redisProvider.mget(keys);
     const returnValues: T[] = [];
     values.forEach((value) => {
@@ -95,6 +95,12 @@ export class RedisService implements OnModuleDestroy, OnModuleInit {
       }
     });
     return returnValues;
+  }
+
+  async del(...keys: string[]) {
+    const values = await this.redisProvider.del(keys);
+
+    return values;
   }
 
   async smembers<T>(key: string) {

@@ -9,6 +9,7 @@ import {
   WebSocketServer,
 } from '@nestjs/websockets';
 import { Server } from 'socket.io';
+import { IoReserveSeat } from 'src/common/constants/interface/ioReserveSeat.interface';
 
 @WebSocketGateway(81, { transports: ['websocket'], namespace: 'screening' })
 //   implements OnGatewayInit, OnGatewayConnection, OnGatewayDisconnect
@@ -44,7 +45,10 @@ export class ScreeningGetaway
     // return data;
   }
 
-  emitToScreening(screeningId: string, payload: any) {
+  emitToScreening(
+    screeningId: string,
+    payload: IoReserveSeat | IoReserveSeat[],
+  ) {
     console.log(screeningId, payload);
     this.server.to(screeningId).emit('joinScreening', payload);
   }

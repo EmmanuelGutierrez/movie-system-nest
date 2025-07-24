@@ -40,7 +40,7 @@ export class ScreeningListenerService implements OnModuleDestroy, OnModuleInit {
     this.suscriber.on('pmessage', (pattern, channel, message) => {
       console.log('pmessage', pattern, channel, message);
       const data = message.split(':');
-      if (data[1] && data[3]) {
+      if (data[0] && data[0] === 'screening' && data[1] && data[3]) {
         this.screeningService.notifySeatReservationExpired(
           parseInt(data[3]),
           parseInt(data[1]),

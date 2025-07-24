@@ -257,11 +257,18 @@ export class ScreeningService {
       screeningId: number;
       seatReservationId: number;
       status: statusSeat;
+      temporalTransactionId: string;
     },
     userId: number,
   ) {
-    const { seatReservationId, screeningId, status } = data;
-    const cacheKey = screeningKey(screeningId, seatReservationId, userId);
+    const { seatReservationId, screeningId, status, temporalTransactionId } =
+      data;
+    const cacheKey = screeningKey(
+      screeningId,
+      seatReservationId,
+      userId,
+      temporalTransactionId,
+    );
     let seat: SeatReservation | null =
       await this.redisService.get<SeatReservation>(cacheKey);
     if (!seat) {
@@ -284,9 +291,9 @@ export class ScreeningService {
     if (!keys || keys.length === 0) {
       return [];
     }
-    const seatReservations = await this.redisService.mget<SeatReservation>(
-      ...keys,
-    );
+    console.log('KEYS getReservedSeats', keys);
+    const seatReservations =
+      await this.redisService.mget<SeatReservation>(keys);
     if (!seatReservations || seatReservations.length === 0) {
       return [];
     }
@@ -294,16 +301,19 @@ export class ScreeningService {
   }
 
   async temporarilyReserveGroupSeat(data: SeatReserveDto, userId: number) {
-    const { seatReserve, screeningId } = data;
+    const { seatReserve, screeningId, temporalTransactionId } = data;
     const locks: Lock[] = [];
     const indexKey = `screening:${screeningId}:seatreservation:index`;
     try {
       for (const seat of seatReserve) {
-        const lock = await this.redisService.acquireLock(
-          `screening:${screeningId}:seatreservation:${seat.seatReservationId}`,
-          2000,
+        const lockKey = `screening:${screeningId}:seatreservation:${seat.seatReservationId}`;
+        const lock = await this.redisService.acquireLock(lockKey, 2000);
+        const key = screeningKey(
+          screeningId,
+          seat.seatReservationId,
+          userId,
+          temporalTransactionId,
         );
-        const key = `screening:${screeningId}:seatreservation:${seat.seatReservationId}:${userId}`;
         let seatReservation: SeatReservation | null =
           await this.redisService.get<SeatReservation>(key);
         if (!seatReservation) {
@@ -312,10 +322,12 @@ export class ScreeningService {
           );
         }
         if (seatReservation.status !== statusSeat.AVAILABLE) {
+          console.log('THROW');
           throw new ConflictException(
             `Seat ${seatReservation.id} is not available`,
           );
         }
+        console.log('SIGUE');
         seatReservation.status = statusSeat.TEMPORARILY_RESERVED;
         await this.redisService.set(key, seatReservation, 30);
         await this.redisService.sadd(indexKey, key);
@@ -328,8 +340,13 @@ export class ScreeningService {
         this.screeningGateway.emitToScreening(screeningId.toString(), payload);
         locks.push(lock);
       }
+      return {
+        success: true,
+        message: 'Seats temporarily reserved successfully',
+      };
     } catch (error) {
       console.log(error);
+      throw new HttpException(error.response as object, error.status as number);
     } finally {
       for (const lock of locks) {
         await this.redisService
@@ -347,5 +364,58 @@ export class ScreeningService {
     };
 
     this.screeningGateway.emitToScreening(screeningId.toString(), payload);
+  }
+
+  async reserveSeats(data: SeatReserveDto, userId: number) {
+    const qr = this.dataSource.createQueryRunner();
+    await qr.startTransaction();
+
+    try {
+      const { seatReserve, screeningId, temporalTransactionId } = data;
+      const redisKeys = seatReserve.map((sr) =>
+        screeningKey(
+          screeningId,
+          sr.seatReservationId,
+          userId,
+          temporalTransactionId,
+        ),
+      );
+      console.log('KEYS reserveSeats', redisKeys);
+      const seatReservations =
+        await this.redisService.mget<SeatReservation>(redisKeys);
+      console.log('LENGTH', seatReservations.length, seatReserve.length);
+      if (seatReservations.length !== seatReserve.length) {
+        throw new ConflictException('Invalid seat reservation data');
+      }
+      const seatReservationIds = seatReserve.map((sr) => sr.seatReservationId);
+      console.log('SEATS', seatReservationIds);
+      await qr.manager
+        .createQueryBuilder()
+        .update(SeatReservation)
+        .set({
+          status: statusSeat.OCCUPIED,
+          user: { id: userId },
+        })
+        .where('screeningId = :screeningId', { screeningId })
+        .andWhere('id IN (:...seatsId)', { seatsId: seatReservationIds })
+        .execute();
+
+      await this.redisService.del(...redisKeys);
+      const payload: IoReserveSeat[] = seatReservations.map((sr) => ({
+        screeningId,
+        seatReservationId: sr.id,
+        status: statusSeat.OCCUPIED,
+      }));
+      this.screeningGateway.emitToScreening(screeningId.toString(), payload);
+      await qr.commitTransaction();
+      console.log('Seats reserved successfully');
+      return { success: true, message: 'Seats reserved successfully' };
+    } catch (error: any) {
+      console.log(error);
+      await qr.rollbackTransaction();
+      throw new InternalServerErrorException();
+    } finally {
+      await qr.release();
+    }
   }
 }

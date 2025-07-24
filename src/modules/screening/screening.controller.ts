@@ -61,7 +61,15 @@ export class ScreeningController {
   }
 
   @Patch('/temp-reserve-seat')
-  remove(@Body() data: SeatReserveDto, @Request() req: RequestWithUserI) {
+  tempReserveSeat(
+    @Body() data: SeatReserveDto,
+    @Request() req: RequestWithUserI,
+  ) {
     return this.screeningService.temporarilyReserveGroupSeat(data, req.user.id);
+  }
+
+  @Patch('/reserve-seat')
+  ReserveSeat(@Body() data: SeatReserveDto, @Request() req: RequestWithUserI) {
+    return this.screeningService.reserveSeats(data, req.user.id);
   }
 }

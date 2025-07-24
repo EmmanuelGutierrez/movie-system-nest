@@ -2,12 +2,11 @@ import { Type } from 'class-transformer';
 import {
   ArrayMinSize,
   IsArray,
-  IsEnum,
   IsNotEmpty,
   IsNumber,
+  IsString,
   ValidateNested,
 } from 'class-validator';
-import { statusSeat } from 'src/common/constants/enum/seat-status.enum';
 
 export class SeatReservation {
   @IsNotEmpty()
@@ -27,6 +26,10 @@ export class SeatReserveDto {
   screeningId!: number;
 
   @IsNotEmpty()
-  @IsEnum(statusSeat)
-  status!: statusSeat;
+  @IsString()
+  temporalTransactionId!: string;
+
+  // @IsNotEmpty()
+  // @IsEnum(statusSeat)
+  // status!: statusSeat;
 }

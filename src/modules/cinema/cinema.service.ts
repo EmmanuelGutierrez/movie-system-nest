@@ -41,7 +41,8 @@ export class CinemaService {
     // const res = await this.cinemaRepo.updateOne({ _id: cinemaId }, data);
     const cinema = await this.getOneById(cinemaId);
     this.cinemaRepo.merge(cinema, data);
-    return cinema;
+    const res = await this.cinemaRepo.save(cinema);
+    return res;
   }
 
   async getAll(params: FilterCinemaDto) {
