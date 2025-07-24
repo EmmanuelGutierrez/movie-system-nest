@@ -16,5 +16,6 @@ import { PersonModule } from './person/person.module';
   ],
   controllers: [MovieController],
   providers: [MovieService],
+  exports: [MovieService],
 })
 export class MovieModule {}

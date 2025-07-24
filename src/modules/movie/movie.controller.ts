@@ -16,9 +16,11 @@ import { CreateMoviePhotosDto } from './dto/create-movie-photos.dto';
 import { FileFieldsInterceptor } from '@nestjs/platform-express';
 import { ImageFilesValidationPipe } from 'src/common/pipes/ImageFilesValidationPipe.pipe';
 import { PhotosPoster } from 'src/common/constants/types/multiple-files.type';
+import { CacheInterceptor } from '@nestjs/cache-manager';
 // import { CreateMovieDto } from './dto/create-movie-photos.dto';
 // import { UpdateMovieDto } from './dto/update-movie.dto';
 
+@UseInterceptors(CacheInterceptor)
 @Controller('movie')
 export class MovieController {
   constructor(private readonly movieService: MovieService) {}

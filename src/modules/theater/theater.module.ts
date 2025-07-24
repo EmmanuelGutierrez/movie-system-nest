@@ -14,5 +14,6 @@ import { CinemaModule } from '../cinema/cinema.module';
   ],
   controllers: [TheaterController],
   providers: [TheaterService],
+  exports: [TheaterService],
 })
 export class TheaterModule {}

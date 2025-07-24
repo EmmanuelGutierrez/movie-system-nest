@@ -1,4 +1,15 @@
-import { PartialType } from '@nestjs/swagger';
-import { CreateScreeningDto } from './create-screening.dto';
+import { IsNumber, IsOptional, IsString } from 'class-validator';
 
-export class UpdateScreeningDto extends PartialType(CreateScreeningDto) {}
+export class UpdateScreeningDto {
+  @IsString()
+  @IsOptional()
+  readonly name?: string;
+
+  @IsNumber()
+  @IsOptional()
+  readonly movieId?: number;
+
+  @IsNumber()
+  @IsOptional()
+  readonly price?: number;
+}

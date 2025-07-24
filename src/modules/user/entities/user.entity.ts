@@ -1,11 +1,13 @@
 import { Exclude } from 'class-transformer';
 import { roles } from 'src/common/constants/enum/roles.enum';
 import { ColumnNumberTransformer } from 'src/common/utils/ColumnNumberTransformer';
+import { SeatReservation } from 'src/modules/screening/entities/seat_reservation.entity';
 import {
   BeforeInsert,
   BeforeUpdate,
   Column,
   Entity,
+  OneToMany,
   PrimaryGeneratedColumn,
 } from 'typeorm';
 
@@ -61,6 +63,9 @@ export class User {
     transformer: new ColumnNumberTransformer(true),
   })
   updatedAt: number;
+
+  @OneToMany(() => SeatReservation, (seatReservations) => seatReservations.user)
+  public seatReservations: SeatReservation[];
 
   @BeforeInsert()
   setCreatedAt() {

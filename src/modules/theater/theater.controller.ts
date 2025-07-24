@@ -23,11 +23,13 @@ export class TheaterController {
 
   @Get()
   findAll(@Query() params: FilterTheaterDto) {
+    console.log('GET ALL');
     return this.theaterService.getAll(params);
   }
 
   @Get(':id')
   findOne(@Param('id', ParseIntPipe) id: number) {
+    console.log('GET ONE');
     return this.theaterService.getOneById(id);
   }
 

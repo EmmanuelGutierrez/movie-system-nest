@@ -2,7 +2,7 @@ import { Module } from '@nestjs/common';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { ConfigModule } from '@nestjs/config';
-import { config } from './common/config/config';
+import { config, configType } from './common/config/config';
 import { getEnvPath } from './common/utils/env.helper';
 import { UserModule } from './modules/user/user.module';
 import { CinemaModule } from './modules/cinema/cinema.module';
@@ -16,6 +16,9 @@ import * as Joi from 'joi';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { PostgresqlConfigService } from './database/ormconfig';
 import { CloudinaryModule } from './modules/cloudinary/cloudinary.module';
+import { CacheModule } from '@nestjs/cache-manager';
+import KeyvRedis from '@keyv/redis';
+import { RedisModule } from './modules/redis/redis.module';
 
 @Module({
   imports: [
@@ -43,6 +46,21 @@ import { CloudinaryModule } from './modules/cloudinary/cloudinary.module';
         CLOUDINARY_CLOUD_NAME: Joi.string().required(),
       }),
     }),
+    CacheModule.registerAsync({
+      isGlobal: true,
+      inject: [config.KEY],
+      useFactory: (configService: configType) => {
+        return {
+          // ttl: 30 * 60000,
+          ttl: 10000,
+          stores: [
+            new KeyvRedis({
+              url: `redis://:${configService.redis.password}@${configService.redis.host}:${configService.redis.port}/${configService.redis.db}`,
+            }),
+          ],
+        };
+      },
+    }),
     UserModule,
     CinemaModule,
     FileModule,
@@ -52,8 +70,15 @@ import { CloudinaryModule } from './modules/cloudinary/cloudinary.module';
     TheaterModule,
     AuthModule,
     CloudinaryModule,
+    RedisModule,
   ],
   controllers: [AppController],
-  providers: [AppService],
+  providers: [
+    AppService,
+    // {
+    //   provide: APP_INTERCEPTOR,
+    //   useClass: CacheInterceptor,
+    // },
+  ],
 })
 export class AppModule {}

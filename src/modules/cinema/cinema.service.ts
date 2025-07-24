@@ -22,9 +22,12 @@ export class CinemaService {
     await qr.connect();
     await qr.startTransaction();
     try {
-      const repo: Repository<Cinema> = this.dataSource.getRepository(Cinema);
-      const newCinema = repo.create(data);
-      return await repo.save(newCinema);
+      // const repo: Repository<Cinema> = this.dataSource.getRepository(Cinema);
+      const newCinema = qr.manager.create(Cinema, data);
+
+      const res = await qr.manager.save(newCinema);
+      await qr.commitTransaction();
+      return res;
     } catch (error: any) {
       console.log(error);
       await qr.rollbackTransaction();

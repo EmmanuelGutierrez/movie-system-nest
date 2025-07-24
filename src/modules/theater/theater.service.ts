@@ -41,7 +41,7 @@ export class TheaterService {
         ...data,
       });
 
-      const newTheater = await this.dataSource.manager.save(theater);
+      const newTheater = await qr.manager.save(theater);
       const layout: Seat[] = [];
       for (let row = 1; row < rows + 1; row++) {
         for (let col = 1; col < seatsPerRow + 1; col++) {
@@ -50,9 +50,11 @@ export class TheaterService {
           );
         }
       }
-      this.theaterRepo.merge(newTheater, { seats: layout });
-
-      return await this.dataSource.manager.save(theater);
+      // throw new InternalServerErrorException('Error forzado');
+      qr.manager.merge(Theater, newTheater, { seats: layout });
+      const res = await qr.manager.save(theater);
+      await qr.commitTransaction();
+      return res;
     } catch (error: any) {
       console.log(error);
       await qr.rollbackTransaction();
@@ -63,7 +65,10 @@ export class TheaterService {
   }
 
   async getOneById(id: number) {
-    const theater = await this.theaterRepo.findOne({ where: { id } });
+    const theater = await this.theaterRepo.findOne({
+      where: { id },
+      relations: { seats: true },
+    });
     if (!theater) {
       throw new NotFoundException('Not found');
     }
@@ -71,6 +76,7 @@ export class TheaterService {
   }
 
   async getAll(params: FilterTheaterDto) {
+    console.log('GET ALL');
     const { limit = 10, page = 1, name, rows, seatsPerRow, cinemaId } = params;
     const options: FindManyOptions<Theater> = {
       take: limit,
@@ -103,7 +109,7 @@ export class TheaterService {
         cinema: { id: cinemaId },
       };
     }
-
+    console.log(options);
     const theaters = await this.theaterRepo.find(options);
     const total = await this.theaterRepo.count();
     return { page, inThisPage: theaters.length, total, data: theaters };

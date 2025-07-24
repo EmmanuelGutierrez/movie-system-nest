@@ -4,12 +4,16 @@ import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { HttpExceptionFilter } from './common/exception/http-exception-filter';
+import { RedisIoAdapter } from './modules/redis/RedisIoAdapter';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
   app.enableCors();
   const config: ConfigService = app.get(ConfigService);
   const port: number = config.get<number>('PORT') as number;
+  const redisIoAdapter = new RedisIoAdapter(app);
+  await redisIoAdapter.connectToRedis();
+  app.useWebSocketAdapter(redisIoAdapter);
   app.useGlobalPipes(
     new ValidationPipe({
       whitelist: true,

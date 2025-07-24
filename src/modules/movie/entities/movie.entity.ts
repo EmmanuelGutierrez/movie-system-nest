@@ -15,6 +15,7 @@ import {
 } from 'typeorm';
 import { Genre } from '../genre/entities/genre.entity';
 import { Person } from '../person/entities/person.entity';
+import { Screening } from 'src/modules/screening/entities/screening.entity';
 
 @Entity()
 export class Movie {
@@ -58,6 +59,12 @@ export class Movie {
     cascade: true,
   })
   public photos?: File[];
+
+  @OneToMany(() => Screening, (screening) => screening.movie, {
+    nullable: true,
+    cascade: true,
+  })
+  public screenings?: Screening[];
 
   @Column({ type: 'boolean', default: false })
   public active: boolean;
