@@ -1,7 +1,7 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
+import { HttpException, Injectable, NotFoundException } from '@nestjs/common';
+import { InjectDataSource, InjectRepository } from '@nestjs/typeorm';
 import { Movie } from './entities/movie.entity';
-import { Repository } from 'typeorm';
+import { DataSource, Repository } from 'typeorm';
 import { FileService } from '../file/file.service';
 import { CreateMovieDto } from './dto/create-movie.dto';
 // import { CreateMovieParsedDto } from './dto/create-movie-parsed.dto';
@@ -21,6 +21,7 @@ export class MovieService {
     private readonly fileService: FileService,
     private readonly personService: PersonService,
     private readonly genreService: GenreService,
+    @InjectDataSource() private readonly dataSource: DataSource,
   ) {}
 
   async createMovie({
@@ -84,79 +85,95 @@ export class MovieService {
     { genres, actors, directors, ...data }: CreateMoviePhotosDto,
     files: PhotosPoster,
   ) {
-    const actorsMovie: Person[] = [];
-    const directorsMovie: Person[] = [];
+    const qr = this.dataSource.createQueryRunner();
+    await qr.connect();
+    await qr.startTransaction();
 
-    if (actors && actors.length) {
-      for (const actorName of actors) {
-        const actor = await this.personService.findByNameAndLastName(actorName);
-        if (actor) {
-          actorsMovie.push(actor);
-        } else {
-          const actor = await this.personService.create({ name: actorName });
-          actorsMovie.push(actor);
+    try {
+      const actorsMovie: Person[] = [];
+      const directorsMovie: Person[] = [];
+
+      if (actors && actors.length) {
+        for (const actorName of actors) {
+          const actor =
+            await this.personService.findByNameAndLastName(actorName);
+          if (actor) {
+            actorsMovie.push(actor);
+          } else {
+            const actor = await this.personService.create({ name: actorName });
+            actorsMovie.push(actor);
+          }
         }
       }
-    }
 
-    if (directors && directors.length) {
-      for (const actorName of directors) {
-        const actor = await this.personService.findByNameAndLastName(actorName);
-        if (actor) {
-          directorsMovie.push(actor);
-        } else {
-          const actor = await this.personService.create({ name: actorName });
-          directorsMovie.push(actor);
+      if (directors && directors.length) {
+        for (const actorName of directors) {
+          const actor =
+            await this.personService.findByNameAndLastName(actorName);
+          if (actor) {
+            directorsMovie.push(actor);
+          } else {
+            const actor = await this.personService.create({ name: actorName });
+            directorsMovie.push(actor);
+          }
         }
       }
-    }
 
-    let genresEntities: Genre[] = [];
-    if (genres && genres.length) {
-      genresEntities = await this.genreService.findByIds(genres);
-    }
+      let genresEntities: Genre[] = [];
+      if (genres && genres.length) {
+        genresEntities = await this.genreService.findByIds(genres);
+      }
 
-    console.log('movie', !files);
-    // const newMovieData: any = {
-    //   ...data,
-    //   genres: genresEntities,
-    //   actors: actorsMovie,
-    //   directors: directorsMovie,
-    //   poster: undefined,
-    //   photos: undefined,
-    // };
-    const movie = this.movieRepo.create({
-      ...data,
-      genres: genresEntities,
-      actors: actorsMovie,
-      directors: directorsMovie,
-    });
-
-    const savedMovie = await this.movieRepo.save(movie);
-
-    if (files && files.poster) {
-      console.log('FILE');
-      const poster = await this.fileService.create(
-        files.poster[0],
-        `movies/files/posters`,
-      );
-      console.log(poster);
-      this.movieRepo.merge(savedMovie, { poster });
-      console.log('pasamos 1');
-    }
-    if (files && files.photos) {
-      console.log('pasamos 2');
-      const photos = await this.fileService.createMany({
-        filesData: files.photos,
-        // external_id: movie.id,
-        folder: `movies/files/photos `,
-        toBase64: true,
+      console.log('movie', !files);
+      // const newMovieData: any = {
+      //   ...data,
+      //   genres: genresEntities,
+      //   actors: actorsMovie,
+      //   directors: directorsMovie,
+      //   poster: undefined,
+      //   photos: undefined,
+      // };
+      const movie = qr.manager.create(Movie, {
+        ...data,
+        genres: genresEntities,
+        actors: actorsMovie,
+        directors: directorsMovie,
       });
-      console.log('pasamos 3');
-      this.movieRepo.merge(savedMovie, { photos });
-      console.log('pasamos 4');
+
+      const savedMovie = await qr.manager.save(movie);
+      if (files && files.photos) {
+        console.log('pasamos 2');
+        const photos = await this.fileService.createMany({
+          filesData: files.photos,
+          // external_id: movie.id,
+          folder: `movies/files/photos`,
+          toBase64: true,
+        });
+        console.log('pasamos 3');
+        qr.manager.merge(Movie, savedMovie, { photos });
+        console.log('pasamos 4');
+      }
+      if (files && files.poster) {
+        console.log('FILE');
+        const poster = await this.fileService.create(
+          files.poster[0],
+          `movies/files/posters`,
+        );
+        console.log(poster);
+        qr.manager.merge(Movie, savedMovie, { poster });
+        console.log('pasamos 1');
+      }
+
+      const res = await qr.manager.save(savedMovie);
+      await qr.commitTransaction();
+      return res;
+    } catch (error: any) {
+      await qr.rollbackTransaction();
+      console.log(error);
+      throw new HttpException(error.response as object, error.status as number);
+    } finally {
+      await qr.release();
     }
-    return await this.movieRepo.save(savedMovie);
   }
 
   async update(
@@ -235,25 +252,12 @@ export class MovieService {
 
   async getAll(params: FilterDto) {
     const { page = 1, description, genres, limit = 10 } = params;
-    // const movies = await this.movieRepo.find();
-    // const options: FindManyOptions<Movie> = {};
-    // const optionsWithQuery: any = { where: [] };
-    // if (genres && genres.length) {
-    //   options.where = { ...options.where, 'movie.genres && :genres': genres };
-    // }
-    // if (description) {
-    //   filters.description = { $rejex: description };
-    // }
-    // filters.active = true;
-    // const movies = await this.movieRepo.find();
-
-    // const total = await this.movieRepo.countDocuments();
-    // return { page, inThisPage: movies.length, total, data: movies };
-
     const qb = this.movieRepo
       .createQueryBuilder('movie')
       .leftJoinAndSelect('movie.directors', 'directors')
-      .leftJoinAndSelect('movie.actors', 'actors');
+      .leftJoinAndSelect('movie.actors', 'actors')
+      .leftJoinAndSelect('movie.photos', 'photos')
+      .leftJoinAndSelect('movie.poster', 'poster');
     // qb.where('movie.active = :active', { active: true });
     if (description) {
       qb.andWhere('movie.description LIKE :description', {
@@ -265,8 +269,8 @@ export class MovieService {
     }
     qb.skip((page - 1) * limit).take(limit);
     const total = await this.movieRepo.count();
-    console.log('qr', qb.getQuery());
-    console.log('params', qb.getParameters());
+    // console.log('qr', qb.getQuery());
+    // console.log('params', qb.getParameters());
     const movies = await qb.getMany();
     return { page, inThisPage: movies.length, total, data: movies };
   }
@@ -275,7 +279,13 @@ export class MovieService {
     // const movies = await this.movieRepo.find();
     const movie = await this.movieRepo.findOne({
       where: { id },
-      relations: { photos: true, poster: true },
+      relations: {
+        photos: true,
+        poster: true,
+        directors: true,
+        actors: true,
+        genres: true,
+      },
     });
     if (!movie) {
       throw new NotFoundException('Not found');

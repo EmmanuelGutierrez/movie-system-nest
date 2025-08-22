@@ -9,6 +9,7 @@ import { MovieModule } from '../movie/movie.module';
 import { ScreeningGetaway } from './screening.gateway';
 import { RedisModule } from '../redis/redis.module';
 import { ScreeningListenerService } from './screening-listener.service';
+import { AuthModule } from '../auth/auth.module';
 
 @Module({
   imports: [
@@ -17,6 +18,7 @@ import { ScreeningListenerService } from './screening-listener.service';
     TheaterModule,
     MovieModule,
     RedisModule,
+    AuthModule,
   ],
   controllers: [ScreeningController],
   providers: [ScreeningService, ScreeningGetaway, ScreeningListenerService],

@@ -1,7 +1,7 @@
 import {
+  ConnectedSocket,
   //   ConnectedSocket,
   MessageBody,
-  OnGatewayConnection,
   OnGatewayDisconnect,
   OnGatewayInit,
   SubscribeMessage,
@@ -10,17 +10,20 @@ import {
 } from '@nestjs/websockets';
 import { Server } from 'socket.io';
 import { IoReserveSeat } from 'src/common/constants/interface/ioReserveSeat.interface';
+import { AuthGateway } from 'src/common/gatewaey/AuthGateway';
+import { AuthService } from '../auth/auth.service';
+import { SocketWithUser } from 'src/common/constants/types/SocketWithUser.type';
 
 @WebSocketGateway(81, { transports: ['websocket'], namespace: 'screening' })
 //   implements OnGatewayInit, OnGatewayConnection, OnGatewayDisconnect
 export class ScreeningGetaway
-  implements OnGatewayInit, OnGatewayConnection, OnGatewayDisconnect
+  extends AuthGateway
+  implements OnGatewayInit, OnGatewayDisconnect
 {
   @WebSocketServer()
   server: Server;
-  constructor() {}
-  handleConnection() {
-    console.log('Connected');
+  constructor(protected readonly authService: AuthService) {
+    super(authService);
   }
   handleDisconnect() {
     console.log('Disconnected');
@@ -36,11 +39,11 @@ export class ScreeningGetaway
   handleHello(
     @MessageBody()
     data: string[],
-    // @ConnectedSocket() socket: Socket,
+    @ConnectedSocket() socket: SocketWithUser,
   ) {
-    console.log(`User ${data[0]} joined screening ${data[1]}|`, data);
+    console.log(`User ${socket.user.id} joined screening ${data[1]}|`, data);
     // this.server.to('1').emit('joinScreening', '3');
-    this.server.socketsJoin(data[0]);
+    this.server.socketsJoin(socket.user.id.toString());
 
     // return data;
   }

@@ -8,7 +8,7 @@ import {
   ValidateNested,
 } from 'class-validator';
 
-export class SeatReservation {
+export class SeatReservationIdDto {
   @IsNotEmpty()
   @IsNumber()
   seatReservationId!: number;
@@ -18,8 +18,8 @@ export class SeatReserveDto {
   @IsArray()
   @ValidateNested()
   @ArrayMinSize(1)
-  @Type(() => SeatReservation)
-  seatReserve!: SeatReservation[];
+  @Type(() => SeatReservationIdDto)
+  seatReserve!: SeatReservationIdDto[];
 
   @IsNotEmpty()
   @IsNumber()

@@ -9,6 +9,8 @@ import {
   UploadedFiles,
   Param,
   ParseIntPipe,
+  UseGuards,
+  Req,
 } from '@nestjs/common';
 import { MovieService } from './movie.service';
 import { FilterDto } from './dto/filter.dto';
@@ -17,6 +19,11 @@ import { FileFieldsInterceptor } from '@nestjs/platform-express';
 import { ImageFilesValidationPipe } from 'src/common/pipes/ImageFilesValidationPipe.pipe';
 import { PhotosPoster } from 'src/common/constants/types/multiple-files.type';
 import { CacheInterceptor } from '@nestjs/cache-manager';
+import { ApiBearerAuth } from '@nestjs/swagger';
+import { AuthGuard } from '@nestjs/passport';
+import { APiPaginatedResponse } from 'src/common/utils/ApiPaginatedResponse';
+import { Movie } from './entities/movie.entity';
+import { Request } from 'express';
 // import { CreateMovieDto } from './dto/create-movie-photos.dto';
 // import { UpdateMovieDto } from './dto/update-movie.dto';
 
@@ -30,6 +37,8 @@ export class MovieController {
   //   return this.movieService.create(createMovieDto);
   // }
 
+  @ApiBearerAuth()
+  @UseGuards(AuthGuard('jwt'))
   @Post()
   @UseInterceptors(
     FileFieldsInterceptor([
@@ -58,8 +67,11 @@ export class MovieController {
     return this.movieService.createMoviePhotos(createMovieDto, files);
   }
 
+  // @UseGuards(AuthGuard('jwt'))
+  @APiPaginatedResponse(Movie)
   @Get()
-  findAll(@Query() querys: FilterDto) {
+  findAll(@Query() querys: FilterDto, @Req() request: Request) {
+    console.log('req', request.cookies, request.signedCookies, request.path);
     return this.movieService.getAll(querys);
   }
 

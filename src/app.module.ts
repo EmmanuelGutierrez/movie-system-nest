@@ -19,7 +19,6 @@ import { CloudinaryModule } from './modules/cloudinary/cloudinary.module';
 import { CacheModule } from '@nestjs/cache-manager';
 import KeyvRedis from '@keyv/redis';
 import { RedisModule } from './modules/redis/redis.module';
-
 @Module({
   imports: [
     TypeOrmModule.forRootAsync({ useClass: PostgresqlConfigService }),
@@ -52,7 +51,7 @@ import { RedisModule } from './modules/redis/redis.module';
       useFactory: (configService: configType) => {
         return {
           // ttl: 30 * 60000,
-          ttl: 10000,
+          ttl: 60 * 5 * 1000,
           stores: [
             new KeyvRedis({
               url: `redis://:${configService.redis.password}@${configService.redis.host}:${configService.redis.port}/${configService.redis.db}`,

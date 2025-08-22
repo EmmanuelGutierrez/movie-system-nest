@@ -11,6 +11,7 @@ import { LocalStrategy } from './strategies/LocalStrategy';
 @Module({
   controllers: [AuthController],
   providers: [AuthService, AuthHelper, LocalStrategy, JwtStrategy],
+  exports: [AuthService],
   imports: [
     UserModule,
     JwtModule.registerAsync({

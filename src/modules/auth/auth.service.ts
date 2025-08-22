@@ -6,6 +6,7 @@ import {
 import { UserService } from '../user/user.service';
 import { AuthHelper } from './auth.helper';
 import { CreateUserDto } from '../user/dto/create-user.dto';
+import { User } from '../user/entities/user.entity';
 
 @Injectable()
 export class AuthService {
@@ -20,12 +21,21 @@ export class AuthService {
     return payload;
   }
 
+  generateToken(user: User) {
+    const token = this.authHelper.generateTokenForUser(user);
+    return { token };
+  }
+
+  validateToken(token: string) {
+    const data = this.authHelper.validateToken(token);
+    return data;
+  }
+
   async validateUser(email: string, pass: string) {
     const user = await this.userService.getOneByEmailWithPassword(email);
     if (!user) {
       throw new UnauthorizedException('No auth');
     }
-    console.log('user pass', user.password, pass);
     const isValidPass = this.authHelper.isPasswordValid(pass, user.password);
     console.log('validate', isValidPass);
     if (!isValidPass) {

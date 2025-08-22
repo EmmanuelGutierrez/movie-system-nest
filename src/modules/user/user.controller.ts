@@ -5,10 +5,17 @@ import {
   Body,
   Param,
   ParseIntPipe,
+  UseGuards,
+  Req,
 } from '@nestjs/common';
 import { UserService } from './user.service';
 import { CreateUserDto } from './dto/create-user.dto';
+import { ApiBearerAuth } from '@nestjs/swagger';
+import { AuthGuard } from '@nestjs/passport';
+import { RequestWithUserI } from 'src/common/constants/interface/RequestWithUser';
 
+@ApiBearerAuth()
+@UseGuards(AuthGuard('jwt'))
 @Controller('user')
 export class UserController {
   constructor(private readonly userService: UserService) {}
@@ -23,18 +30,14 @@ export class UserController {
     return this.userService.getAll();
   }
 
+  @Get('me')
+  async me(@Req() req: RequestWithUserI) {
+    const me = await this.userService.getOneById(req.user.id);
+    return me;
+  }
+
   @Get(':id')
   findOne(@Param('id', ParseIntPipe) id: number) {
     return this.userService.getOneById(id);
   }
-
-  // @Patch(':id')
-  // update(@Param('id') id: string, @Body() updateUserDto: UpdateUserDto) {
-  //   return this.userService.update(+id, updateUserDto);
-  // }
-
-  // @Delete(':id')
-  // remove(@Param('id') id: string) {
-  //   return this.userService.remove(+id);
-  // }
 }

@@ -1,17 +1,17 @@
 import { Injectable } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcryptjs';
-import { jwtPayloadI } from '../../common/constants/interface/token';
+import {
+  jwtPayloadI,
+  TokenDataI,
+} from '../../common/constants/interface/token';
 import { User } from '../user/entities/user.entity';
 @Injectable()
 export class AuthHelper {
   constructor(private readonly jwt: JwtService) {}
 
-  public generateTokenPassword(): string {
-    const jwtPayload = {
-      audience: 'changePassword',
-    };
-    return this.jwt.sign(jwtPayload, { expiresIn: '60m' });
+  public validateToken(token: string) {
+    return this.jwt.verify<TokenDataI>(token);
   }
 
   public generateTokenForUser(user: User): string {

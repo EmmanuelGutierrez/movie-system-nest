@@ -107,7 +107,16 @@ export class ScreeningService {
   }
 
   async getOneById(id: number) {
-    const screening = await this.screeningRepo.findOne({ where: { id: id } });
+    const screening = await this.screeningRepo.findOne({
+      where: { id: id },
+      relations: {
+        movie: true,
+        theater: { cinema: true },
+        seatReservations: {
+          seat: true,
+        },
+      },
+    });
     if (!screening) {
       throw new NotFoundException('Not found');
     }
@@ -198,6 +207,17 @@ export class ScreeningService {
     const seats = await this.seatReservationRepo.find({
       where: { screening: { id: screeningId } },
       relations: { seat: true },
+    });
+    if (!seats) {
+      throw new NotFoundException('Screening not found');
+    }
+    return seats;
+  }
+
+  async screeningsAvailableByMovie(movieId: number) {
+    const seats = await this.screeningRepo.find({
+      where: { active: true, movie: { id: movieId } },
+      relations: { theater: true, seatReservations: true },
     });
     if (!seats) {
       throw new NotFoundException('Screening not found');
@@ -322,14 +342,12 @@ export class ScreeningService {
           );
         }
         if (seatReservation.status !== statusSeat.AVAILABLE) {
-          console.log('THROW');
           throw new ConflictException(
             `Seat ${seatReservation.id} is not available`,
           );
         }
-        console.log('SIGUE');
         seatReservation.status = statusSeat.TEMPORARILY_RESERVED;
-        await this.redisService.set(key, seatReservation, 30);
+        await this.redisService.set(key, seatReservation, 60 * 5 + 10);
         await this.redisService.sadd(indexKey, key);
         const payload: IoReserveSeat = {
           status: seatReservation.status,

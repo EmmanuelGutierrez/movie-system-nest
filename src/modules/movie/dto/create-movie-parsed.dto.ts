@@ -13,6 +13,10 @@ export class CreateMovieParsedDto {
 
   @IsString()
   @IsNotEmpty()
+  readonly trailer_url!: string;
+
+  @IsString()
+  @IsNotEmpty()
   readonly description!: string;
 
   @IsNumber()

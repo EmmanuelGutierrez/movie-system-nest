@@ -14,7 +14,19 @@ export class CreateMoviePhotosDto {
 
   @IsString()
   @IsNotEmpty()
+  readonly trailer_url!: string;
+
+  @IsString()
+  @IsNotEmpty()
   readonly description!: string;
+
+  @IsString()
+  @IsNotEmpty()
+  readonly language!: string;
+
+  @IsString()
+  @IsOptional()
+  readonly detail!: string;
 
   @IsNumber()
   @IsNotEmpty()

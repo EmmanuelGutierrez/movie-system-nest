@@ -25,8 +25,17 @@ export class Movie {
   @Column({ type: 'varchar', nullable: false })
   public name: string;
 
+  @Column({ type: 'varchar', nullable: true })
+  public trailer_youtube_id: string;
+
   @Column({ type: 'text', nullable: false })
   public description: string;
+
+  @Column({ type: 'varchar', nullable: true })
+  public details: string;
+
+  @Column({ type: 'varchar', nullable: false, default: 'ingles' })
+  public language: string;
 
   // @Column({ type: 'enum', enum: movieGenres, nullable: false, array: true })
   @ManyToMany(() => Genre)
