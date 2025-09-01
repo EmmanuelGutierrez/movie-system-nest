@@ -1,4 +1,4 @@
-import { fileType } from 'src/common/constants/types/file.type';
+import { fileType } from 'src/common/types/file.type';
 
 export interface CreateManyI {
   filesData: Express.Multer.File[] | string[];

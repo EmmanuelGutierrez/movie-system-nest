@@ -1,5 +1,5 @@
 import { IsArray, IsNumber, IsOptional, IsString, Min } from 'class-validator';
-import { movieGenres } from 'src/common/constants/enum/genres.enum';
+import { movieGenres } from 'src/common/enum/genres.enum';
 
 export class FilterDto {
   @IsOptional()

@@ -3,7 +3,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { File } from './entities/file.entity';
 import { Repository } from 'typeorm';
 import { CloudinaryService } from '../cloudinary/cloudinary.service';
-import { fileType } from 'src/common/constants/types/file.type';
+import { fileType } from 'src/common/types/file.type';
 import { CreateManyI } from './interfaces/CreateMany.interface';
 
 @Injectable()

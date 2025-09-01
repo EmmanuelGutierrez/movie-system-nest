@@ -1,6 +1,7 @@
 import { Exclude } from 'class-transformer';
-import { roles } from 'src/common/constants/enum/roles.enum';
+import { roles } from 'src/common/enum/roles.enum';
 import { ColumnNumberTransformer } from 'src/common/utils/ColumnNumberTransformer';
+import { Invoice } from 'src/modules/invoice/entities/invoice.entity';
 import { SeatReservation } from 'src/modules/screening/entities/seat_reservation.entity';
 import {
   BeforeInsert,
@@ -67,6 +68,8 @@ export class User {
   @OneToMany(() => SeatReservation, (seatReservations) => seatReservations.user)
   public seatReservations: SeatReservation[];
 
+  @OneToMany(() => Invoice, (invoice) => invoice.user)
+  public invoices: Invoice[];
   @BeforeInsert()
   setCreatedAt() {
     const now = Math.floor(new Date().getTime() / 1000);

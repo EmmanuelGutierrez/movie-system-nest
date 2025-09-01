@@ -14,7 +14,7 @@ export class SeatReservationIdDto {
   seatReservationId!: number;
 }
 
-export class SeatReserveDto {
+export class SeatReserveTempDto {
   @IsArray()
   @ValidateNested()
   @ArrayMinSize(1)
@@ -28,6 +28,16 @@ export class SeatReserveDto {
   @IsNotEmpty()
   @IsString()
   temporalTransactionId!: string;
+
+  // @IsNotEmpty()
+  // @IsEnum(statusSeat)
+  // status!: statusSeat;
+}
+
+export class SeatReserveDto extends SeatReserveTempDto {
+  @IsNotEmpty()
+  @IsString()
+  preferenceId!: string;
 
   // @IsNotEmpty()
   // @IsEnum(statusSeat)

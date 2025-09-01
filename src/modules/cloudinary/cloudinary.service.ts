@@ -4,7 +4,7 @@ import {
   InternalServerErrorException,
 } from '@nestjs/common';
 // import { CloudinaryResponse } from 'src/common/constants/types/CloudinaryResponse.type';
-import { fileType } from 'src/common/constants/types/file.type';
+import { fileType } from 'src/common/types/file.type';
 import { v2 as cloudinary, UploadApiResponse } from 'cloudinary';
 import { Readable } from 'stream';
 

@@ -3,7 +3,7 @@ import { PassportStrategy } from '@nestjs/passport';
 import { Request } from 'express';
 import { ExtractJwt, Strategy } from 'passport-jwt';
 import { config, configType } from 'src/common/config/config';
-import { TokenDataI } from 'src/common/constants/interface/token';
+import { TokenDataI } from 'src/common/interface/token';
 
 @Injectable()
 export class JwtStrategy extends PassportStrategy(Strategy) {
@@ -19,7 +19,7 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
         },
         ExtractJwt.fromAuthHeaderAsBearerToken(),
       ]),
-      ignoreExpiration: true,
+      // ignoreExpiration: true,
       secretOrKey: configService.api.jwtSecret || 'dev',
     });
   }

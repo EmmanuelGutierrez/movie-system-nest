@@ -17,7 +17,7 @@ import { FilterDto } from './dto/filter.dto';
 import { CreateMoviePhotosDto } from './dto/create-movie-photos.dto';
 import { FileFieldsInterceptor } from '@nestjs/platform-express';
 import { ImageFilesValidationPipe } from 'src/common/pipes/ImageFilesValidationPipe.pipe';
-import { PhotosPoster } from 'src/common/constants/types/multiple-files.type';
+import { PhotosPoster } from 'src/common/types/multiple-files.type';
 import { CacheInterceptor } from '@nestjs/cache-manager';
 import { ApiBearerAuth } from '@nestjs/swagger';
 import { AuthGuard } from '@nestjs/passport';

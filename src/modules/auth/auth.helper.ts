@@ -4,7 +4,7 @@ import * as bcrypt from 'bcryptjs';
 import {
   jwtPayloadI,
   TokenDataI,
-} from '../../common/constants/interface/token';
+} from '../../common/interface/token';
 import { User } from '../user/entities/user.entity';
 @Injectable()
 export class AuthHelper {

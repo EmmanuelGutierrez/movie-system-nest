@@ -19,6 +19,7 @@ import { CloudinaryModule } from './modules/cloudinary/cloudinary.module';
 import { CacheModule } from '@nestjs/cache-manager';
 import KeyvRedis from '@keyv/redis';
 import { RedisModule } from './modules/redis/redis.module';
+import { MercadopagoModule } from './modules/mercadopago/mercadopago.module';
 @Module({
   imports: [
     TypeOrmModule.forRootAsync({ useClass: PostgresqlConfigService }),
@@ -70,6 +71,7 @@ import { RedisModule } from './modules/redis/redis.module';
     AuthModule,
     CloudinaryModule,
     RedisModule,
+    MercadopagoModule,
   ],
   controllers: [AppController],
   providers: [

@@ -16,13 +16,15 @@ import { Screening } from './entities/screening.entity';
 import { FilterScreeningDto } from './dto/filter.dto';
 import { ScreeningGetaway } from './screening.gateway';
 import { UpdateSeatDto } from './dto/update-seat.dto';
-import { statusSeat } from 'src/common/constants/enum/seat-status.enum';
+import { statusSeat } from 'src/common/enum/seat-status.enum';
 import { screeningKey } from 'src/common/utils/cache-keys/screening-key';
-import { SeatReserveDto } from './dto/reserve-seat.dto';
+import { SeatReserveDto, SeatReserveTempDto } from './dto/reserve-seat.dto';
 import { RedisService } from '../redis/redis.service';
 import { Lock } from 'redlock';
-import { IoReserveSeat } from 'src/common/constants/interface/ioReserveSeat.interface';
-
+import { SeatReservationCache } from './dto/seat-reservation-cache.dto';
+import { InvoiceService } from '../invoice/invoice.service';
+import { reservationTime } from 'src/common/constants/reservationTime';
+import { ReserveSeatPaymentDto } from './dto/reserve-seat-payment';
 @Injectable()
 export class ScreeningService {
   // private readonly suscriber: Redis;
@@ -36,6 +38,7 @@ export class ScreeningService {
     @InjectDataSource() private readonly dataSource: DataSource,
     private readonly screeningGateway: ScreeningGetaway,
     private readonly redisService: RedisService,
+    private readonly invoiceService: InvoiceService,
     // @Inject('REDIS')
     // private readonly redisProvider: Redis,
   ) {
@@ -165,6 +168,7 @@ export class ScreeningService {
   async getOneSeatReservation(seatReservationId: number) {
     const seatReservation = await this.seatReservationRepo.findOne({
       where: { id: seatReservationId },
+      relations: { seat: true },
     });
     if (!seatReservation) {
       throw new NotFoundException('Seat reservation not found');
@@ -293,7 +297,7 @@ export class ScreeningService {
       await this.redisService.get<SeatReservation>(cacheKey);
     if (!seat) {
       seat = await this.getOneSeatReservation(seatReservationId);
-      await this.redisService.set(cacheKey, seat, 30);
+      await this.redisService.set(cacheKey, seat, reservationTime + 10);
     }
     if (seat.status !== statusSeat.AVAILABLE) {
       throw new ConflictException(`Seat ${seat.id} is not available`);
@@ -311,20 +315,21 @@ export class ScreeningService {
     if (!keys || keys.length === 0) {
       return [];
     }
-    console.log('KEYS getReservedSeats', keys);
     const seatReservations =
       await this.redisService.mget<SeatReservation>(keys);
+    console.log('KEYS seatReservations', seatReservations);
     if (!seatReservations || seatReservations.length === 0) {
       return [];
     }
     return seatReservations;
   }
 
-  async temporarilyReserveGroupSeat(data: SeatReserveDto, userId: number) {
+  async temporarilyReserveGroupSeat(data: SeatReserveTempDto, userId: number) {
     const { seatReserve, screeningId, temporalTransactionId } = data;
     const locks: Lock[] = [];
     const indexKey = `screening:${screeningId}:seatreservation:index`;
     try {
+      const seatReservations: SeatReservation[] = [];
       for (const seat of seatReserve) {
         const lockKey = `screening:${screeningId}:seatreservation:${seat.seatReservationId}`;
         const lock = await this.redisService.acquireLock(lockKey, 2000);
@@ -336,6 +341,7 @@ export class ScreeningService {
         );
         let seatReservation: SeatReservation | null =
           await this.redisService.get<SeatReservation>(key);
+        // console.log('seatReservation', seatReservation);
         if (!seatReservation) {
           seatReservation = await this.getOneSeatReservation(
             seat.seatReservationId,
@@ -346,21 +352,32 @@ export class ScreeningService {
             `Seat ${seatReservation.id} is not available`,
           );
         }
+        seatReservations.push(seatReservation);
         seatReservation.status = statusSeat.TEMPORARILY_RESERVED;
-        await this.redisService.set(key, seatReservation, 60 * 5 + 10);
+        await this.redisService.set(key, seatReservation, reservationTime + 10);
         await this.redisService.sadd(indexKey, key);
-        const payload: IoReserveSeat = {
+        const payload: SeatReservationCache = {
           status: seatReservation.status,
           seatReservationId: seatReservation.id,
           screeningId,
           // seatId: seatReservation.seat.id,
         };
-        this.screeningGateway.emitToScreening(screeningId.toString(), payload);
+        this.screeningGateway.emitToScreening(screeningId.toString(), [
+          payload,
+        ]);
         locks.push(lock);
       }
+      const screening = await this.getOneById(screeningId);
+      const invoice = await this.invoiceService.create({
+        screening,
+        userId,
+        seatReservations,
+        temporalTransactionId: data.temporalTransactionId,
+      });
       return {
         success: true,
         message: 'Seats temporarily reserved successfully',
+        invoice,
       };
     } catch (error) {
       console.log(error);
@@ -375,13 +392,69 @@ export class ScreeningService {
   }
 
   notifySeatReservationExpired(seatReservationId: number, screeningId: number) {
-    const payload: IoReserveSeat = {
+    const payload: SeatReservationCache = {
       status: statusSeat.AVAILABLE,
       seatReservationId,
       screeningId,
     };
 
-    this.screeningGateway.emitToScreening(screeningId.toString(), payload);
+    this.screeningGateway.emitToScreening(screeningId.toString(), [payload]);
+  }
+
+  async reserveSeatsByPreferenceId(
+    data: ReserveSeatPaymentDto,
+    userId: number,
+  ) {
+    const qr = this.dataSource.createQueryRunner();
+    await qr.startTransaction();
+    try {
+      const screening = await this.screeningRepo.findOne({
+        where: {
+          seatReservations: {
+            invoice: { external_id: data.preferenceId, user: { id: userId } },
+            // user: { id: userId },
+          },
+        },
+        relations: {
+          seatReservations: { invoice: true, seat: true },
+          movie: true,
+          theater: { cinema: true },
+        },
+      });
+      if (!screening) {
+        throw new NotFoundException('Screening not found');
+      }
+      if (
+        screening.seatReservations.every(
+          (sr) => sr.status === statusSeat.OCCUPIED,
+        )
+      ) {
+        return {
+          success: true,
+          message: 'Seats reserved successfully',
+          invoice: screening.seatReservations[0].invoice,
+          screening: screening,
+          seatReservations: screening.seatReservations,
+        };
+      }
+      return this.reserveSeats(
+        {
+          preferenceId: data.preferenceId,
+          screeningId: screening.id,
+          seatReserve: screening.seatReservations.map((sr) => ({
+            seatReservationId: sr.id,
+          })),
+          temporalTransactionId: data.temporalTransactionId,
+        },
+        userId,
+      );
+    } catch (error) {
+      console.log(error);
+      await qr.rollbackTransaction();
+      throw new InternalServerErrorException();
+    } finally {
+      await qr.release();
+    }
   }
 
   async reserveSeats(data: SeatReserveDto, userId: number) {
@@ -398,15 +471,21 @@ export class ScreeningService {
           temporalTransactionId,
         ),
       );
-      console.log('KEYS reserveSeats', redisKeys);
+      // console.log('KEYS reserveSeats', redisKeys);
       const seatReservations =
         await this.redisService.mget<SeatReservation>(redisKeys);
       console.log('LENGTH', seatReservations.length, seatReserve.length);
       if (seatReservations.length !== seatReserve.length) {
         throw new ConflictException('Invalid seat reservation data');
       }
+      // const screening = await this.getOneById(screeningId);
+      // const invoice = await this.invoiceService.create({
+      //   screening,
+      //   userId,
+      //   seatReservations,
+      // });
       const seatReservationIds = seatReserve.map((sr) => sr.seatReservationId);
-      console.log('SEATS', seatReservationIds);
+      // console.log('SEATS', seatReservationIds);
       await qr.manager
         .createQueryBuilder()
         .update(SeatReservation)
@@ -419,7 +498,7 @@ export class ScreeningService {
         .execute();
 
       await this.redisService.del(...redisKeys);
-      const payload: IoReserveSeat[] = seatReservations.map((sr) => ({
+      const payload: SeatReservationCache[] = seatReservations.map((sr) => ({
         screeningId,
         seatReservationId: sr.id,
         status: statusSeat.OCCUPIED,
@@ -427,7 +506,17 @@ export class ScreeningService {
       this.screeningGateway.emitToScreening(screeningId.toString(), payload);
       await qr.commitTransaction();
       console.log('Seats reserved successfully');
-      return { success: true, message: 'Seats reserved successfully' };
+      const screening = await this.getOneById(data.screeningId);
+      const invoice = await this.invoiceService.getOneByExternalId(
+        data.preferenceId,
+      );
+      return {
+        success: true,
+        message: 'Seats reserved successfully',
+        invoice,
+        screening,
+        seatReservations,
+      };
     } catch (error: any) {
       console.log(error);
       await qr.rollbackTransaction();

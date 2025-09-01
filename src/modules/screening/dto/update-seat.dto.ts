@@ -7,7 +7,7 @@ import {
   IsNumber,
   ValidateNested,
 } from 'class-validator';
-import { statusSeat } from 'src/common/constants/enum/seat-status.enum';
+import { statusSeat } from 'src/common/enum/seat-status.enum';
 
 export class SeatPosition {
   @IsNotEmpty()

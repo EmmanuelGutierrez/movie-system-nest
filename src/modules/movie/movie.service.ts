@@ -5,7 +5,7 @@ import { DataSource, Repository } from 'typeorm';
 import { FileService } from '../file/file.service';
 import { CreateMovieDto } from './dto/create-movie.dto';
 // import { CreateMovieParsedDto } from './dto/create-movie-parsed.dto';
-import { PhotosPoster } from 'src/common/constants/types/multiple-files.type';
+import { PhotosPoster } from 'src/common/types/multiple-files.type';
 import { UpdateMovieParsedDto } from './dto/update-movie-parsed.dto';
 import { FilterDto } from './dto/filter.dto';
 import { PersonService } from './person/person.service';

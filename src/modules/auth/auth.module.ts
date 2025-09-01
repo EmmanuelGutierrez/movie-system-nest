@@ -20,7 +20,7 @@ import { LocalStrategy } from './strategies/LocalStrategy';
         return {
           secret: configService.api.jwtSecret,
           signOptions: {
-            expiresIn: '60m',
+            expiresIn: '120m',
           },
         };
       },

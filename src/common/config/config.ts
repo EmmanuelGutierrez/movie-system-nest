@@ -7,6 +7,7 @@ export const config = registerAs('config', () => {
       jwtSecret: process.env.JWT_SECRET,
       apiKey: process.env.API_KEY,
       env: process.env.API_ENV,
+      frontUrl: process.env.FRONT_URL,
     },
     database: {
       dbName: process.env.DATABASE_NAME,
@@ -26,6 +27,10 @@ export const config = registerAs('config', () => {
       apiKey: process.env.CLOUDINARY_API_KEY,
       apiSecret: process.env.CLOUDINARY_API_SECRET,
       cloudName: process.env.CLOUDINARY_CLOUD_NAME,
+    },
+    mercadopago: {
+      accessToken: process.env.MERCADOPAGO_ACCESS_TOKEN,
+      publicKey: process.env.MERCADOPAGO_PUBLIC_KEY,
     },
   };
 });

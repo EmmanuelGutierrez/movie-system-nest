@@ -6,7 +6,7 @@ import {
   Param,
   Query,
   ParseIntPipe,
-  UseInterceptors,
+  // UseInterceptors,
   Patch,
   UseGuards,
   Request,
@@ -14,16 +14,19 @@ import {
 import { ScreeningService } from './screening.service';
 import { CreateScreeningDto } from './dto/create-screening.dto';
 import { FilterScreeningDto } from './dto/filter.dto';
-import { CacheInterceptor } from '@nestjs/cache-manager';
+// import { CacheInterceptor } from '@nestjs/cache-manager';
 import { UpdateSeatDto } from './dto/update-seat.dto';
-import { SeatReserveDto } from './dto/reserve-seat.dto';
+import { SeatReserveTempDto } from './dto/reserve-seat.dto';
 import { AuthGuard } from '@nestjs/passport';
-import { RequestWithUserI } from 'src/common/constants/interface/RequestWithUser';
-import { ApiBearerAuth } from '@nestjs/swagger';
+import { RequestWithUserI } from 'src/common/interface/RequestWithUser';
+import { ApiBearerAuth, ApiOkResponse } from '@nestjs/swagger';
 import { APiPaginatedResponse } from 'src/common/utils/ApiPaginatedResponse';
 import { Screening } from './entities/screening.entity';
+import { TempReserveGroupSeatRes } from './dto/temp-reserve-group-set-res.dto';
+import { ReserveSeatsRes } from './dto/reserve-seats-res';
+import { ReserveSeatPaymentDto } from './dto/reserve-seat-payment';
 
-@UseInterceptors(CacheInterceptor)
+// @UseInterceptors(CacheInterceptor)
 @Controller('screening')
 export class ScreeningController {
   constructor(private readonly screeningService: ScreeningService) {}
@@ -56,6 +59,7 @@ export class ScreeningController {
   @UseGuards(AuthGuard('jwt'))
   @Get('/reserved-seats/:id')
   getTemporarilyReserveSeat(@Param('id', ParseIntPipe) id: number) {
+    console.log('reserved');
     return this.screeningService.getReservedSeats(id);
   }
 
@@ -73,19 +77,32 @@ export class ScreeningController {
   }
 
   @ApiBearerAuth()
+  @ApiOkResponse({ type: TempReserveGroupSeatRes })
   @UseGuards(AuthGuard('jwt'))
   @Patch('/temp-reserve-seat')
   tempReserveSeat(
-    @Body() data: SeatReserveDto,
+    @Body() data: SeatReserveTempDto,
     @Request() req: RequestWithUserI,
   ) {
     return this.screeningService.temporarilyReserveGroupSeat(data, req.user.id);
   }
 
+  // @ApiOkResponse({ type: ReserveSeatsRes })
+  // @ApiBearerAuth()
+  // @UseGuards(AuthGuard('jwt'))
+  // @Patch('/reserve-seat')
+  // ReserveSeat(@Body() data: SeatReserveDto, @Request() req: RequestWithUserI) {
+  //   return this.screeningService.reserveSeats(data, req.user.id);
+  // }
+
+  @ApiOkResponse({ type: ReserveSeatsRes })
   @ApiBearerAuth()
   @UseGuards(AuthGuard('jwt'))
   @Patch('/reserve-seat')
-  ReserveSeat(@Body() data: SeatReserveDto, @Request() req: RequestWithUserI) {
-    return this.screeningService.reserveSeats(data, req.user.id);
+  reserveSeat(
+    @Body() data: ReserveSeatPaymentDto,
+    @Request() req: RequestWithUserI,
+  ) {
+    return this.screeningService.reserveSeatsByPreferenceId(data, req.user.id);
   }
 }

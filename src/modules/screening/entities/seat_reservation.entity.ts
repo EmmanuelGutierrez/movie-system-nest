@@ -1,4 +1,4 @@
-import { statusSeat } from 'src/common/constants/enum/seat-status.enum';
+import { statusSeat } from 'src/common/enum/seat-status.enum';
 import { ColumnNumberTransformer } from 'src/common/utils/ColumnNumberTransformer';
 import {
   BeforeInsert,
@@ -11,11 +11,17 @@ import {
 import { Screening } from './screening.entity';
 import { Seat } from 'src/modules/theater/entities/seat.entity';
 import { User } from 'src/modules/user/entities/user.entity';
+import { Invoice } from 'src/modules/invoice/entities/invoice.entity';
 
 @Entity()
 export class SeatReservation {
   @PrimaryGeneratedColumn()
   public id: number;
+
+  @ManyToOne(() => Invoice, (invoice) => invoice.seatReservations, {
+    nullable: true,
+  })
+  public invoice?: Invoice;
 
   @Column({ enum: statusSeat, default: statusSeat.AVAILABLE })
   public status: statusSeat;
@@ -27,7 +33,7 @@ export class SeatReservation {
   public seat: Seat;
 
   @ManyToOne(() => User, (user) => user.seatReservations, { nullable: true })
-  public user: User;
+  public user?: User;
 
   @Column({
     type: 'bigint',

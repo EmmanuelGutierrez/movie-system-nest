@@ -12,7 +12,7 @@ import { UserService } from './user.service';
 import { CreateUserDto } from './dto/create-user.dto';
 import { ApiBearerAuth } from '@nestjs/swagger';
 import { AuthGuard } from '@nestjs/passport';
-import { RequestWithUserI } from 'src/common/constants/interface/RequestWithUser';
+import { RequestWithUserI } from 'src/common/interface/RequestWithUser';
 
 @ApiBearerAuth()
 @UseGuards(AuthGuard('jwt'))
